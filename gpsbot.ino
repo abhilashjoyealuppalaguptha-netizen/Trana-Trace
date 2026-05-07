@@ -8,52 +8,51 @@
 #include <UniversalTelegramBot.h>
 #include <ESP8266HTTPClient.h>
 
-// ───── WiFi ──────────────────────────────────────
+
 const char* ssid     = "Moto";
 const char* password = "vardhanguru";
 
-// ───── SERVER ────────────────────────────────────
+
 const char* serverURL = "http://10.123.144.228:3001/update"; // CHANGE THIS
 
-// ───── Telegram ──────────────────────────────────
+
 #define BOT_TOKEN  "8696098274:AAFs_fApNQ27_MfS0b1DkogkqpsShWA4FKY"
 #define CHAT_ID    "7454524513"
 
-// ───── OLED ──────────────────────────────────────
+
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-// ───── GPS ───────────────────────────────────────
+
 SoftwareSerial gpsSerial(14, 12);
 TinyGPSPlus gps;
 
-// ───── FPGA UART ─────────────────────────────────
+
 SoftwareSerial fpgaSerial(13, 15);
 
-// ───── State ─────────────────────────────────────
+
 byte currentState   = 0;
 byte previousState  = 255;
 byte lastValidState = 0;
 bool alertSent      = false;
 
-// ───── GPS Data ──────────────────────────────────
+
 String latStr = "Searching...";
 String lonStr = "Searching...";
 String gpsSource = "DUM-E";
 
-// ───── Timers ────────────────────────────────────
 unsigned long lastDisplayUpdate = 0;
 unsigned long lastWifiCheck     = 0;
 unsigned long lastTelegramTime  = 0;
 
-//-----telegram------
-// ── Add these two lines near other globals ──────
+
+
 WiFiClientSecure secureClient;
 UniversalTelegramBot bot(BOT_TOKEN, secureClient);
 
-// ───── WiFi Connect ──────────────────────────────
+
 void connectWiFi() {
     Serial.print("Connecting WiFi");
 
@@ -64,30 +63,30 @@ void connectWiFi() {
         Serial.print(".");
     }
 
-    Serial.println("\nWiFi OK ✅");
+    Serial.println("\nWiFi OK ");
     Serial.print("IP: ");
     Serial.println(WiFi.localIP());
 }
 
-// ───── Telegram Send ─────────────────────────────
+
 bool sendTelegram(String msg) {
     if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("WiFi not connected ❌");
+        Serial.println("WiFi not connected ");
         return false;
     }
     Serial.println("Sending Telegram...");
     secureClient.setInsecure();
     bool ok = bot.sendMessage(CHAT_ID, msg, "");
     if (ok) {
-        Serial.println("Telegram SENT ✅");
+        Serial.println("Telegram SENT ");
         return true;
     } else {
-        Serial.println("Telegram FAILED ❌");
+        Serial.println("Telegram FAILED ");
         return false;
     }
 }
 
-// ───── BUILD JSON ────────────────────────────────
+
 String buildJSON() {
 
     bool wifiStatus = (WiFi.status() == WL_CONNECTED);
@@ -108,7 +107,7 @@ String buildJSON() {
     return json;
 }
 
-// ───── SEND TO SERVER ────────────────────────────
+
 void sendToServer(String json) {
 
     if (WiFi.status() != WL_CONNECTED) return;
