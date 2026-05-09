@@ -1,110 +1,212 @@
-# TRANA-TRACE
-> GPS-Based Covert Tracking & Emergency Alert System  
-> **FPGA · NodeMCU ESP8266 · Node.js · React**
+# TRANA-TRACE AI
+
+> AI-Powered GPS-Based Covert Tracking & Emergency Alert System
+> **FPGA · ESP8266 · ESP32-CAM · OpenCV · Node.js · React**
 
 ---
 
-## Overview
+# Overview
 
-Trana-Trace is a real-time GPS tracking and emergency alert device designed for personal safety scenarios. It combines an FPGA-based state machine, a NodeMCU (ESP8266) microcontroller, a NEO-6M GPS module, and a live web dashboard to provide covert tracking, SOS alerting, and remote monitoring.
+TRANA-TRACE AI is a real-time covert tracking and emergency alert system designed for personal safety and anti-theft applications. The project combines FPGA-based hardware control, GPS tracking, AI-powered face recognition, and a live web dashboard for intelligent monitoring and emergency response.
 
-A key feature is the **Fake-Off (Stealth) mode** — the device physically appears powered down while it continues tracking silently in the background and sends a Telegram alert with the live location.
+The system supports a unique **Fake-Off (Stealth) Mode**, where the device physically appears powered off while secretly continuing GPS tracking and sending emergency alerts in the background.
+
+An integrated AI Face Recognition module detects unauthorized users using an ESP32-CAM and OpenCV. If an unknown person attempts access, the system automatically activates stealth tracking, captures the intruder image, and sends live alerts with GPS location.
 
 ---
 
-## Project Structure
+# Key Features
 
-```
-Trana-Trace/
-├── gpsbot.ino          # Arduino firmware — GPS, FPGA serial, Telegram, HTTP POST
-├── gpsfile.v           # FPGA top-level — wires together all sub-modules
-├── mod1.v              # LED pulse generator — drives 6 LEDs based on FSM state
-├── mod2.v              # UART TX — sends FSM state byte to NodeMCU at 9600 baud
-├── mod3.v              # Trana FSM — core 4-state finite state machine
-├── mod4.v              # Click detector — debounce + click-window counter
+* Real-time GPS tracking
+* FPGA-based finite state machine
+* Fake-Off stealth tracking mode
+* Emergency SOS mode
+* AI Face Recognition using OpenCV
+* Intruder image capture
+* Telegram alert integration
+* Live React dashboard
+* WebSocket real-time updates
+* OLED status display
+* Redis-based state storage
+* Auto-reconnecting frontend
+
+---
+
+# Project Structure
+
+```text
+Trana-Trace-AI/
+├── gpsbot.ino              # NodeMCU firmware — GPS, FPGA serial, Telegram, HTTP POST
+├── gpsfile.v               # FPGA top-level integration
+├── mod1.v                  # LED pulse generator
+├── mod2.v                  # UART TX module
+├── mod3.v                  # Main FSM logic
+├── mod4.v                  # Click detector + debounce
+├── ai-face/
+│   ├── faces/
+│   │   └── owner.jpg       # Authorized user image
+│   ├── recognize.py        # Face recognition engine
+│   ├── captured/           # Stores intruder snapshots
+│   └── requirements.txt
 ├── backend/
-│   ├── server.js       # Node.js + Express + WebSocket + Redis server
+│   ├── server.js           # Express + WebSocket + Redis backend
 │   └── package.json
 └── frontend/
     └── src/
-        ├── pages/      # Dashboard, Alerts, Login, Profile, Settings
-        ├── components/ # LiveMap, StatusPanel, ActivityFeed, SOSButton, Sidebar
-        └── hooks/      # useRealtime.js — WebSocket + REST state management
+        ├── pages/
+        ├── components/
+        └── hooks/
 ```
 
 ---
 
-## Hardware Architecture
+# Hardware Architecture
 
-**Components:** FPGA (27 MHz), NodeMCU ESP8266, NEO-6M GPS module, SSD1306 OLED (128×64), push button, 6× LEDs
+## Components
 
-**Signal flow:**
+* FPGA (27 MHz)
+* NodeMCU ESP8266
+* ESP32-CAM
+* NEO-6M GPS module
+* SSD1306 OLED Display
+* Push Button
+* 6× LEDs
+
+---
+
+# System Signal Flow
+
+```text
+Button → FPGA Click Detector → FSM → UART TX
+        ↓
+NodeMCU ESP8266 → HTTP POST → Redis + WebSocket
+        ↓
+React Dashboard + Telegram Alerts
+
+ESP32-CAM → OpenCV Face Recognition
+        ↓
+Authorized / Unauthorized Detection
+        ↓
+FPGA Trigger → Stealth Mode + Intruder Alert
 ```
-Button → FPGA click detector → FSM → UART TX
-  → NodeMCU RX → HTTP POST → Redis + WebSocket broadcast
-    → React Dashboard + Telegram Alert
+
+---
+
+# FPGA State Machine
+
+| State     | Value | Trigger                          | OLED Display         | LED Behaviour     | Alert            |
+| --------- | ----- | -------------------------------- | -------------------- | ----------------- | ---------------- |
+| NORMAL    | 0     | Authorized owner                 | Live GPS coordinates | All OFF           | None             |
+| FAKE_OFF  | 1     | Unknown face / single click      | Screen blank         | Slow single blink | Stealth Telegram |
+| EMERGENCY | 2     | SOS / multiple failed detections | `!!! SOS !!!`        | Fast flashing     | SOS Telegram     |
+| REAL_OFF  | 3     | Double click from NORMAL         | SYSTEM POWERED OFF   | All OFF           | None             |
+
+Transitions occur within a 1-second click window. FPGA debounce filtering runs at approximately 20ms.
+
+---
+
+# AI Face Recognition Module
+
+The AI module uses OpenCV and the `face_recognition` library to compare live camera frames with stored authorized user images.
+
+## Face Recognition Workflow
+
+```text
+ESP32-CAM → Capture Frame
+        ↓
+OpenCV Face Detection
+        ↓
+Face Encoding Comparison
+        ↓
+Known / Unknown Decision
+        ↓
+Trigger FPGA State Change
 ```
 
-### FPGA State Machine
+---
 
-| State | Value | Click Pattern | OLED Display | LED Behaviour | Alert |
-|-------|-------|---------------|--------------|---------------|-------|
-| NORMAL | 0 | — | Live GPS coords | All OFF | None |
-| FAKE_OFF | 1 | 1 click (from NORMAL) | Screen blank | Slow single blink | Stealth Telegram |
-| EMERGENCY | 2 | 2 clicks (from FAKE_OFF) | `!!! SOS !!!` | Fast full flash | SOS Telegram |
-| REAL_OFF | 3 | 2 clicks (from NORMAL) | SYSTEM POWERED OFF | All OFF | None |
+# Unauthorized Access Response
 
-Transitions are triggered by click patterns within a **1-second window**. Debounce filter runs at ~20ms (540,000 cycles at 27 MHz). State bytes are sent over UART on every state change.
+If an unknown face is detected:
+
+* Stealth mode automatically activates
+* GPS tracking continues silently
+* Intruder image is captured
+* Telegram alert is sent
+* Dashboard updates in real time
 
 ---
 
-## Firmware (`gpsbot.ino`)
+# Firmware (`gpsbot.ino`)
 
-The NodeMCU firmware runs a continuous loop:
+The NodeMCU firmware continuously:
 
-- Reads GPS NMEA sentences via SoftwareSerial from the NEO-6M module
-- Falls back to hardcoded coordinates (Aditya University campus) if GPS lock is unavailable
-- Reads the FPGA state byte over a second SoftwareSerial port
-- Sends a Telegram message on transition to STEALTH (1) or EMERGENCY (2)
-- POSTs a JSON payload to the backend `/update` endpoint every loop iteration
-- Updates the SSD1306 OLED display based on current state
+* Reads GPS data from NEO-6M
+* Reads FPGA state bytes via UART
+* Sends Telegram alerts
+* Uploads device state to backend
+* Updates OLED display
+* Receives AI-triggered alerts
 
-**Libraries required:** `TinyGPSPlus`, `Adafruit_SSD1306`, `UniversalTelegramBot`, `ESP8266HTTPClient`, `SoftwareSerial`
+## Required Libraries
 
----
-
-## Backend (`server.js`)
-
-| Detail | Value |
-|--------|-------|
-| Runtime | Node.js + Express |
-| State store | Redis — `HSET device:TT-01` |
-| Realtime | WebSocket (`ws` library) — broadcasts to all dashboard clients |
-| `POST /update` | Primary hardware ingestion endpoint |
-| `GET /device` | Returns current device state from Redis |
-| `POST /api/sos` | Manual SOS trigger from the dashboard UI |
-
-On each hardware POST, the server updates Redis, calculates status (`OFFLINE` / `ACTIVE` / `DANGER`), and broadcasts a `LOCATION_UPDATE` WebSocket event. FPGA threat detections are pushed as `NEW_LOG` events.
+```text
+TinyGPSPlus
+Adafruit_SSD1306
+UniversalTelegramBot
+ESP8266HTTPClient
+SoftwareSerial
+```
 
 ---
 
-## Frontend (React Dashboard)
+# Backend (`server.js`)
 
-Built with **React + Vite + Tailwind CSS + Framer Motion + Leaflet**.
+| Detail   | Value                            |
+| -------- | -------------------------------- |
+| Runtime  | Node.js + Express                |
+| Database | Redis                            |
+| Realtime | WebSocket (`ws`)                 |
+| REST API | `/update`, `/device`, `/api/sos` |
+| Alerts   | Telegram integration             |
 
-- Live GPS map via Leaflet — updates in real-time from WebSocket
-- Status panel showing WiFi link, FPGA threat status, and device state
-- Activity feed — last 50 log entries
-- SOS button — triggers manual alert from the dashboard
-- Auto-reconnecting WebSocket with 3-second retry
+## Backend Responsibilities
+
+* Store live device data
+* Broadcast WebSocket updates
+* Handle SOS requests
+* Process AI face recognition alerts
+* Manage device logs
 
 ---
 
-## Setup & Running
+# Frontend Dashboard
 
-### 1. Backend
+Built using:
 
-> Requires Redis running on `localhost:6379` (or set `REDIS_URL` env var)
+* React
+* Vite
+* Tailwind CSS
+* Framer Motion
+* Leaflet
+
+## Dashboard Features
+
+* Live GPS map
+* Device state monitoring
+* FPGA threat status
+* Activity feed
+* Intruder snapshot display
+* Live alert notifications
+* Manual SOS trigger
+
+---
+
+# Setup & Running
+
+## 1. Backend
+
+Requires Redis running locally.
 
 ```bash
 cd backend
@@ -112,7 +214,9 @@ npm install
 node server.js
 ```
 
-### 2. Frontend
+---
+
+## 2. Frontend
 
 ```bash
 cd frontend
@@ -120,38 +224,113 @@ npm install
 npm run dev
 ```
 
-### 3. Firmware
+---
 
-1. Create a `config.h` file with your credentials:
+## 3. AI Face Recognition Module
+
+Install Python dependencies:
+
+```bash
+pip install opencv-python face_recognition numpy
+```
+
+Run the recognition engine:
+
+```bash
+cd ai-face
+python recognize.py
+```
+
+---
+
+## 4. Firmware Setup
+
+Create a `config.h` file:
+
 ```cpp
 #define WIFI_SSID     "your_ssid"
 #define WIFI_PASSWORD "your_password"
 #define BOT_TOKEN     "your_telegram_bot_token"
 #define CHAT_ID       "your_chat_id"
 ```
-2. Update `serverURL` in `gpsbot.ino` to your backend IP and port
-3. Flash to NodeMCU via Arduino IDE with ESP8266 board support
-4. Synthesize and upload Verilog files to your FPGA
+
+Then:
+
+1. Update backend IP inside `gpsbot.ino`
+2. Flash firmware to NodeMCU ESP8266
+3. Upload face recognition code to ESP32-CAM
+4. Synthesize and upload Verilog files to FPGA
 
 ---
 
-## ⚠️ Security Notes
+# Telegram Alert Example
 
-> **Never commit credentials to source control.**  
-> Move WiFi SSID/password, Telegram bot token, and chat ID into `config.h` and add it to `.gitignore` before pushing.
+```text
+⚠ ALERT: Unauthorized person detected!
 
-- Backend endpoints have no authentication — restrict to local network or add API key middleware before any public deployment
-- Frontend WebSocket uses `ws://` — switch to `wss://` for HTTPS deployments
+Stealth mode activated.
+Live GPS tracking enabled.
 
----
-
-## Known Limitations
-
-- Battery level is hardcoded to `100%` (hardware spec fixed for current revision)
-- GPS falls back to static campus coordinates when satellite lock is unavailable
-- Duplicate `/update` and `/api/device/update` endpoints exist — `/api/device/update` is deprecated
-- No authentication on backend REST or WebSocket endpoints
+Location:
+https://maps.google.com/?q=LAT,LON
+```
 
 ---
 
-*Trana-Trace · Device ID: TT-01 · Built at  Technical Hub ,Aditya University*
+# Security Notes
+
+* Never commit credentials to GitHub
+* Add `config.h` to `.gitignore`
+* Use HTTPS and `wss://` for deployment
+* Add authentication before production deployment
+
+---
+
+# Known Limitations
+
+* Battery monitoring is currently simulated
+* GPS fallback uses static coordinates without satellite lock
+* Face recognition accuracy depends on lighting conditions
+* Backend APIs currently lack authentication
+
+---
+
+# Future Improvements
+
+* Cloud database integration
+* Mobile application support
+* Geo-fencing
+* Voice activation
+* Mask detection
+* Multi-user face database
+* Battery optimization
+* GSM fallback communication
+
+---
+
+# Technologies Used
+
+| Category         | Technologies             |
+| ---------------- | ------------------------ |
+| Embedded Systems | FPGA, ESP8266, ESP32-CAM |
+| AI / ML          | OpenCV, face_recognition |
+| Frontend         | React, Tailwind CSS      |
+| Backend          | Node.js, Express, Redis  |
+| Communication    | WebSocket, Telegram API  |
+| Tracking         | GPS NEO-6M               |
+
+---
+
+# Final Abstract
+
+TRANA-TRACE AI is an intelligent covert tracking and emergency alert system designed for personal safety and anti-theft applications. The project integrates FPGA-based control logic, GPS tracking, ESP8266 communication, AI-powered facial recognition, and a real-time web dashboard. Using OpenCV-based face recognition, the system identifies unauthorized users and automatically activates stealth tracking mode while capturing intruder images and sending live GPS alerts through Telegram and a monitoring dashboard. The combination of embedded systems, IoT, artificial intelligence, and real-time communication creates a powerful smart security solution for modern safety applications.
+
+---
+
+# Team & Development
+
+**Project Name:** TRANA-TRACE AI
+**Device ID:** TT-01
+**Built at:** Technical Hub, Aditya University
+
+---
