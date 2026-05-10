@@ -8,22 +8,22 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 // WiFi credentials
-#define WIFI_SSID      "YOUR_WIFI_SSID"
-#define WIFI_PASSWORD  "YOUR_WIFI_PASSWORD"
+#define WIFI_SSID      "Moto"
+#define WIFI_PASSWORD  "vardhanguru"
 
 // Backend server URL (no trailing slash)
 // Example: "http://192.168.1.100:3001/update"
-#define SERVER_URL     "http://YOUR_SERVER_IP:3001/update"
+#define SERVER_URL     "http://10.171.252.228:3001/update"
 
 // API key — must match DEVICE_API_KEY in backend/.env
-#define API_KEY        "YOUR_API_KEY_HERE"
+#define API_KEY        "TT-01"
 
 // Telegram Bot credentials
 // Create a bot via @BotFather on Telegram to get BOT_TOKEN.
 // Send any message to your bot, then visit:
 //   https://api.telegram.org/bot<BOT_TOKEN>/getUpdates
 // to find your CHAT_ID.
-#define BOT_TOKEN      "YOUR_TELEGRAM_BOT_TOKEN"
-#define CHAT_ID        "YOUR_TELEGRAM_CHAT_ID"
+#define BOT_TOKEN      "8696098274:AAFs_fApNQ27_MfS0b1DkogkqpsShWA4FKY"
+#define CHAT_ID        "7454524513"
 
 #endif // CONFIG_H
