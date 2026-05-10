@@ -9,7 +9,7 @@ import Settings from './pages/Settings';
 import Login from './pages/Login';
 
 function App() {
-  const { deviceState, logs, wsConnected, triggerSOS } = useRealtime();
+  const { deviceState, logs, wsConnected, triggerSOS, testNotification } = useRealtime();
   
   const isDanger = deviceState?.status === 'DANGER';
   const isOffline = !wsConnected || deviceState?.status === 'OFFLINE';
@@ -45,6 +45,7 @@ function App() {
                 logs={logs} 
                 wsConnected={wsConnected} 
                 triggerSOS={triggerSOS} 
+                testNotification={testNotification}
                 isDanger={isDanger} 
                 isOffline={isOffline}
               />

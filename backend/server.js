@@ -16,104 +16,116 @@ const redisClient = createClient({
   url: process.env.REDIS_URL || 'redis://localhost:6379'
 });
 
-redisClient.on('error', (err) => console.error('Redis Client Error', err));
+redisClient.on('error', (err) => console.error('❌ Redis Error:', err));
 
 // Global settings
 const DEVICE_ID = "TT-01";
 let clients = new Set();
 
-// Initial state if not in Redis
-const defaultDeviceState = {
-  id: DEVICE_ID,
-  status: "OFFLINE",
-  battery: 100,
-  wifi: "false",
-  fpga_alert: "0",
-  telegram_sent: "false",
-  location: JSON.stringify({ lat: 17.087741, lng: 82.068706 }) // Aditya University
-};
-
 // Helper to determine status based on hardware logic
 function calculateStatus(data) {
-  if (!data.wifi) return "OFFLINE";
-  if (data.fpga_alert === 1) return "DANGER";
+  const wifi = String(data.wifi).toLowerCase();
+  if (wifi === 'false') return "OFFLINE";
+  
+  const alert = parseInt(data.fpga_alert, 10);
+  if (alert === 1) return "DANGER";
+  
   return "ACTIVE";
+}
+
+// Broadcast helper
+function broadcastUpdate(message) {
+  const data = JSON.stringify(message);
+  clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(data);
+    }
+  });
 }
 
 // REST Endpoints
 app.get('/device', async (req, res) => {
   try {
     const deviceData = await redisClient.hGetAll(`device:${DEVICE_ID}`);
-    if (deviceData.location) {
-      deviceData.location = JSON.parse(deviceData.location);
-    }
-    // Type casting
-    if (deviceData.battery) deviceData.battery = parseInt(deviceData.battery, 10);
-    if (deviceData.fpga_alert) deviceData.fpga_alert = parseInt(deviceData.fpga_alert, 10);
-    deviceData.wifi = deviceData.wifi === 'true';
-    deviceData.telegram_sent = deviceData.telegram_sent === 'true';
-
-    res.json(deviceData);
+    if (deviceData.location) deviceData.location = JSON.parse(deviceData.location);
+    
+    // Normalize for JSON response
+    const normalized = {
+      ...deviceData,
+      battery: parseInt(deviceData.battery || 100, 10),
+      fpga_alert: parseInt(deviceData.fpga_alert || 0, 10),
+      wifi: deviceData.wifi === 'true',
+      telegram_sent: deviceData.telegram_sent === 'true'
+    };
+    res.json(normalized);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to fetch from Redis" });
+    res.status(500).json({ error: "Redis fetch failure" });
   }
 });
 
-// Hardware Update Endpoint (NodeMCU calls this)
-app.post('/api/device/update', async (req, res) => {
+// Unified Update Logic (Used by both endpoints)
+async function handleHardwareUpdate(req, res) {
   try {
     const { wifi, fpga_alert, telegram_sent, location } = req.body;
+    const timestamp = new Date().toISOString();
+    
+    console.log(`\n[${new Date().toLocaleTimeString()}] 📥 HARDWARE UPDATE RECEIVED`);
+    console.log(` -> Path: ${req.path}`);
+    console.log(` -> Data: WiFi=${wifi}, FPGA=${fpga_alert}, Tel=${telegram_sent}`);
+    console.log(` -> Loc: ${JSON.stringify(location)}`);
 
     const status = calculateStatus({ wifi, fpga_alert });
-    const last_updated = new Date().toISOString();
-
+    
     const deviceUpdate = {
       wifi: String(wifi),
       fpga_alert: String(fpga_alert),
       telegram_sent: String(telegram_sent),
-      location: JSON.stringify(location),
+      location: JSON.stringify(location || { lat: 17.087741, lng: 82.068706 }),
       status: status,
-      battery: "100", // Fixed as per hardware spec
-      last_updated: last_updated
+      battery: "100",
+      last_updated: timestamp
     };
 
     await redisClient.hSet(`device:${DEVICE_ID}`, deviceUpdate);
 
-    // Broadcast to UI
     const broadcastData = {
       ...deviceUpdate,
       id: DEVICE_ID,
-      location: location,
+      location: location || { lat: 17.087741, lng: 82.068706 },
       battery: 100,
-      wifi: wifi,
-      fpga_alert: fpga_alert,
-      telegram_sent: telegram_sent
+      wifi: wifi === true || wifi === 'true',
+      fpga_alert: parseInt(fpga_alert, 10),
+      telegram_sent: telegram_sent === true || telegram_sent === 'true'
     };
 
     broadcastUpdate({ type: 'LOCATION_UPDATE', payload: broadcastData });
 
-    if (fpga_alert === 1) {
+    if (parseInt(fpga_alert, 10) === 1) {
       const logEntry = `[${new Date().toLocaleTimeString()}] FPGA THREAT DETECTED`;
       await redisClient.lPush(`logs:${DEVICE_ID}`, logEntry);
       broadcastUpdate({ type: 'NEW_LOG', payload: logEntry });
+      console.log(" 🚨 THREAT BROADCAST SENT");
     }
 
     res.status(200).json({ success: true, status });
   } catch (error) {
-    console.error("Hardware update error:", error);
+    console.error(" ❌ Update Error:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
-});
+}
+
+app.post('/update', handleHardwareUpdate);
+app.post('/api/device/update', handleHardwareUpdate);
 
 app.post('/api/sos', async (req, res) => {
-  // Keeping SOS for manual UI testing if needed, but hardware is primary
+  console.log(`[${new Date().toLocaleTimeString()}] 🆘 MANUAL SOS TRIGGERED`);
   try {
-    await redisClient.hSet(`device:${DEVICE_ID}`, { status: "DANGER" });
+    await redisClient.hSet(`device:${DEVICE_ID}`, { status: "DANGER", fpga_alert: "1" });
     const logEntry = `[${new Date().toLocaleTimeString()}] MANUAL SOS TRIGGERED`;
     await redisClient.lPush(`logs:${DEVICE_ID}`, logEntry);
+    
     const deviceData = await redisClient.hGetAll(`device:${DEVICE_ID}`);
-    broadcastUpdate({ type: 'STATUS_CHANGE', payload: deviceData });
+    broadcastUpdate({ type: 'STATUS_CHANGE', payload: { ...deviceData, id: DEVICE_ID } });
     broadcastUpdate({ type: 'NEW_LOG', payload: logEntry });
     res.status(200).json({ success: true });
   } catch (e) {
@@ -121,111 +133,91 @@ app.post('/api/sos', async (req, res) => {
   }
 });
 
-// Broadcast helper
-function broadcastUpdate(message) {
-  const data = JSON.stringify(message);
-  for (let client of clients) {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(data);
+app.post('/api/reset-system', async (req, res) => {
+    console.log(`[${new Date().toLocaleTimeString()}] 🧹 SYSTEM RESET REQUESTED`);
+    try {
+        const resetData = {
+            id: DEVICE_ID,
+            status: "ACTIVE",
+            battery: "100",
+            wifi: "true",
+            fpga_alert: "0",
+            telegram_sent: "false",
+            location: JSON.stringify({ lat: 17.087741, lng: 82.068706 }),
+            last_updated: new Date().toISOString()
+        };
+        await redisClient.hSet(`device:${DEVICE_ID}`, resetData);
+        
+        const broadcastData = {
+            ...resetData,
+            location: { lat: 17.087741, lng: 82.068706 },
+            battery: 100,
+            wifi: true,
+            fpga_alert: 0,
+            telegram_sent: false
+        };
+        
+        broadcastUpdate({ type: 'STATUS_CHANGE', payload: broadcastData });
+        broadcastUpdate({ type: 'NEW_LOG', payload: "SYSTEM STATE MANUALLY RESET TO SECURE" });
+        
+        res.status(200).json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
-  }
-}
+});
 
 // WebSocket Connection
 wss.on('connection', async (ws) => {
   clients.add(ws);
+  console.log(`[WS] Client Connected. Total: ${clients.size}`);
+  
   try {
     const deviceData = await redisClient.hGetAll(`device:${DEVICE_ID}`);
-    if (deviceData.location) deviceData.location = JSON.parse(deviceData.location);
-    
-    // Type casting for UI
-    if (deviceData.battery) deviceData.battery = parseInt(deviceData.battery, 10);
-    if (deviceData.fpga_alert) deviceData.fpga_alert = parseInt(deviceData.fpga_alert, 10);
-    deviceData.wifi = deviceData.wifi === 'true';
-    deviceData.telegram_sent = deviceData.telegram_sent === 'true';
-
-    ws.send(JSON.stringify({ type: 'INITIAL_STATE', payload: deviceData }));
+    const normalized = {
+      ...deviceData,
+      id: DEVICE_ID,
+      location: deviceData.location ? JSON.parse(deviceData.location) : { lat: 17.087741, lng: 82.068706 },
+      battery: parseInt(deviceData.battery || 100, 10),
+      fpga_alert: parseInt(deviceData.fpga_alert || 0, 10),
+      wifi: deviceData.wifi === 'true'
+    };
+    ws.send(JSON.stringify({ type: 'INITIAL_STATE', payload: normalized }));
   } catch (e) {
-    console.error("WS Initial state error:", e);
+    console.error("[WS] Sync Error:", e);
   }
 
   ws.on('close', () => {
     clients.delete(ws);
+    console.log(`[WS] Client Disconnected. Total: ${clients.size}`);
   });
 });
 
 async function initRedis() {
   try {
     await redisClient.connect();
-    console.log('Connected to Redis');
+    console.log('✅ Connected to Redis Database');
     const exists = await redisClient.exists(`device:${DEVICE_ID}`);
     if (!exists) {
-      await redisClient.hSet(`device:${DEVICE_ID}`, defaultDeviceState);
+      await redisClient.hSet(`device:${DEVICE_ID}`, {
+        id: DEVICE_ID,
+        status: "ACTIVE",
+        battery: "100",
+        wifi: "true",
+        fpga_alert: "0",
+        telegram_sent: "false",
+        location: JSON.stringify({ lat: 17.087741, lng: 82.068706 })
+      });
     }
   } catch (e) {
-    console.error("Redis init error:", e);
+    console.error("❌ Redis Init Error:", e);
   }
 }
 
 initRedis();
 
-// Consolidated Hardware Update Endpoint (Matches user's NodeMCU config)
-app.post('/update', async (req, res) => {
-  try {
-    // Normalize incoming data (Handle both boolean/number and string formats)
-    const rawWifi = req.body.wifi;
-    const rawFpga = req.body.fpga_alert;
-    const rawTelegram = req.body.telegram_sent;
-    const location = req.body.location;
-
-    const wifi = rawWifi === true || rawWifi === "true";
-    const fpga_alert = parseInt(rawFpga, 10);
-    const telegram_sent = rawTelegram === true || rawTelegram === "true";
-    
-    console.log(`📡 DATA: WiFi=${wifi}, FPGA=${fpga_alert}, Tel=${telegram_sent}, Loc=${JSON.stringify(location)}`);
-
-    const status = calculateStatus({ wifi, fpga_alert });
-    const last_updated = new Date().toISOString();
-    
-    const deviceUpdate = {
-      wifi: String(wifi),
-      fpga_alert: String(fpga_alert),
-      telegram_sent: String(telegram_sent),
-      location: JSON.stringify(location),
-      status: status,
-      battery: "100", 
-      last_updated: last_updated
-    };
-
-    await redisClient.hSet(`device:${DEVICE_ID}`, deviceUpdate);
-
-    // Broadcast to UI
-    const broadcastData = {
-      ...deviceUpdate,
-      id: DEVICE_ID,
-      location: location,
-      battery: 100,
-      wifi: wifi,
-      fpga_alert: fpga_alert,
-      telegram_sent: telegram_sent
-    };
-
-    broadcastUpdate({ type: 'LOCATION_UPDATE', payload: broadcastData });
-    
-    if (fpga_alert === 1) {
-      const logEntry = `[${new Date().toLocaleTimeString()}] FPGA THREAT DETECTED`;
-      await redisClient.lPush(`logs:${DEVICE_ID}`, logEntry);
-      broadcastUpdate({ type: 'NEW_LOG', payload: logEntry });
-    }
-
-    res.status(200).json({ success: true, status });
-  } catch (error) {
-    console.error("Hardware update error:", error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
-
-const PORT = process.env.PORT || 3001;
+const PORT = 3001;
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Backend server running on http://0.0.0.0:${PORT}`);
+  console.log(`\n🚀 TRANA-TRACE BACKEND ONLINE`);
+  console.log(`📡 Listening at http://0.0.0.0:${PORT}`);
+  console.log(`🔗 API endpoints: /update, /api/device/update`);
 });

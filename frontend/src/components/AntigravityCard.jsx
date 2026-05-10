@@ -11,7 +11,7 @@ export default function AntigravityCard({ children, className, isDanger = false,
     <motion.div
       initial={{ y: 20, opacity: 0 }}
       animate={{ 
-        y: [0, -3, 0], 
+        y: isDanger ? 0 : [0, -3, 0], 
         opacity: 1, 
       }}
       transition={{ 

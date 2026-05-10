@@ -8,8 +8,7 @@ import {
 export default function Profile({ deviceState }) {
   const profileData = {
     operativeId: 'TT-01',
-    codename: 'NEXUS PRIME',
-    clearanceLevel: 'ALPHA-7',
+    codename: 'User',
     unit: 'TRANA DEFENSE SYSTEMS',
     assignedZone: 'Aditya University, ADB Road Surampalem',
     coordinates: { lat: 17.087741, lng: 82.068706 },
@@ -85,12 +84,6 @@ export default function Profile({ deviceState }) {
             </span>
 
             <div className="mt-5 w-full border-t border-[#FF0033]/15 pt-5">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <Shield className="w-4 h-4 text-[#FF0033]" />
-                <span className="text-[10px] font-orbitron tracking-[0.2em] text-[#FF0033]">
-                  CLEARANCE: {profileData.clearanceLevel}
-                </span>
-              </div>
             </div>
           </div>
         </motion.div>

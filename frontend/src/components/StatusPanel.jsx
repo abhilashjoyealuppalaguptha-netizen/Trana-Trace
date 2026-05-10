@@ -1,4 +1,5 @@
 import AntigravityCard from './AntigravityCard';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, Battery, Wifi, WifiOff, Radio, Shield, Signal } from 'lucide-react';
 
 export default function StatusPanel({ deviceState, wsConnected }) {
@@ -69,17 +70,26 @@ export default function StatusPanel({ deviceState, wsConnected }) {
       </div>
 
       {/* Communication Failure Warning */}
-      {deviceState.fpga_alert === 1 && !deviceState.telegram_sent && (
-        <div className="mt-4 p-3 bg-[#FF0033]/10 border border-[#FF0033]/30 rounded-xl flex items-center gap-3 animate-pulse">
-          <div className="w-8 h-8 rounded-lg bg-[#FF0033] flex items-center justify-center flex-shrink-0">
-            <WifiOff className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <div className="text-[10px] font-orbitron font-black text-[#FF0033] tracking-widest">COMM FAILURE</div>
-            <div className="text-[9px] font-mono text-gray-400 tracking-wider">TELEGRAM GATEWAY UNREACHABLE</div>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {deviceState.fpga_alert === 1 && !deviceState.telegram_sent && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0, marginTop: 0 }}
+            animate={{ height: 'auto', opacity: 1, marginTop: 16 }}
+            exit={{ height: 0, opacity: 0, marginTop: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="p-3 bg-[#FF0033]/10 border border-[#FF0033]/30 rounded-xl flex items-center gap-3 animate-pulse">
+              <div className="w-8 h-8 rounded-lg bg-[#FF0033] flex items-center justify-center flex-shrink-0">
+                <WifiOff className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <div className="text-[10px] font-orbitron font-black text-[#FF0033] tracking-widest">COMM FAILURE</div>
+                <div className="text-[9px] font-mono text-gray-400 tracking-wider">TELEGRAM GATEWAY UNREACHABLE</div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Status */}
       <div className="flex items-center justify-between py-3 border-b border-[#FF0033]/8">

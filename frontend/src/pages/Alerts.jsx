@@ -243,7 +243,7 @@ export default function Alerts({ isDanger, deviceState, logs = [] }) {
           )}
         </div>
         <p className="text-gray-500 font-mono text-xs tracking-widest uppercase ml-4 pl-1">
-          Real-time hardware telemetry · FPGA · NodeMCU · GPS
+          Device level threat detection & Notification
         </p>
       </motion.div>
 
