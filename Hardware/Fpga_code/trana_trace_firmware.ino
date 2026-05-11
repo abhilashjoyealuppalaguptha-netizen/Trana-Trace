@@ -9,6 +9,14 @@
 #include <ESP8266HTTPClient.h>
 #include "config.h"
 
+#ifndef BOOT_FALLBACK_LAT
+#define BOOT_FALLBACK_LAT "17.087741"
+#endif
+
+#ifndef BOOT_FALLBACK_LON
+#define BOOT_FALLBACK_LON "82.068706"
+#endif
+
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
@@ -31,7 +39,10 @@ bool alertSent      = false;
 
 String latStr = "Searching...";
 String lonStr = "Searching...";
-String gpsSource = "DUM-E";
+String gpsSource = "BOOT-FALLBACK";
+String lastValidLatStr = BOOT_FALLBACK_LAT;
+String lastValidLonStr = BOOT_FALLBACK_LON;
+bool hasGpsFix = false;
 
 unsigned long lastDisplayUpdate = 0;
 unsigned long lastWifiCheck     = 0;
@@ -160,13 +171,21 @@ void loop() {
     if (gps.location.isValid() && gps.location.age() < 2000) {
         latStr = String(gps.location.lat(), 6);
         lonStr = String(gps.location.lng(), 6);
+        lastValidLatStr = latStr;
+        lastValidLonStr = lonStr;
+        hasGpsFix = true;
         gpsSource = "NEO-6M";
         Serial.println("📡 Location accessed NEO-6M");
+    } else if (hasGpsFix) {
+        latStr = lastValidLatStr;
+        lonStr = lastValidLonStr;
+        gpsSource = "LAST-KNOWN";
+        Serial.println("GPS lock unavailable; using last known fix");
     } else {
-        latStr = "17.087741";
-        lonStr = "82.068706";
-        gpsSource = "DUM-E";
-        Serial.println("⚠️ Location accessed DUM-E");
+        latStr = lastValidLatStr;
+        lonStr = lastValidLonStr;
+        gpsSource = "BOOT-FALLBACK";
+        Serial.println("GPS lock unavailable; using boot fallback until first fix");
     }
 
     // ── FPGA Read ───────────────────────────────

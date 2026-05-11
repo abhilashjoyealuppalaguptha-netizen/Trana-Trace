@@ -76,7 +76,10 @@ always @(posedge clk or posedge sys_rst) begin
     end
 end
 
-uart_tx u_uart (
+uart_tx #(
+    .CLK_FREQ_HZ (27_000_000),
+    .BAUD_RATE   (9_600)
+) u_uart (
     .clk      (clk),
     .rst      (sys_rst),
     .tx_start (tx_start),

@@ -22,4 +22,9 @@
 #define BATTERY_ADC_EMPTY  650
 #define BATTERY_ADC_FULL   980
 
+// Used only before the first valid GPS fix. After a fix is acquired,
+// firmware falls back to the last known valid GPS coordinates.
+#define BOOT_FALLBACK_LAT  "17.087741"
+#define BOOT_FALLBACK_LON  "82.068706"
+
 #endif

@@ -147,6 +147,7 @@ The NodeMCU firmware continuously:
 * Uploads authenticated device state to backend
 * Updates OLED display
 * Sends calibrated battery percentage instead of a fixed demo value
+* Uses the last valid GPS fix as fallback when satellite lock is temporarily unavailable
 
 ## Required Libraries
 
@@ -217,6 +218,7 @@ node server.js
 
 Set `DEVICE_API_KEY` in `backend/.env`. All POST endpoints require the same value in the `X-API-Key` header.
 Set `AUTH_USERNAMES`, `AUTH_PASSWORD`, and `AUTH_TOKEN_SECRET` in the same file for dashboard login. The React app no longer contains a hardcoded username or password.
+The legacy unauthenticated `/update` endpoint has been removed; firmware posts to `/api/device/update` with `X-API-Key`.
 
 For the frontend manual SOS button, copy `frontend/.env.example` to `frontend/.env` and set `VITE_API_KEY` to the same API key used by the backend. The SOS request sends both the dashboard bearer token and `X-Api-Key` header.
 
@@ -283,6 +285,8 @@ iverilog -o tb_trana_fsm Hardware/Fpga_code/tb_trana_fsm.v Hardware/Fpga_code/tr
 iverilog -o tb_click_detector Hardware/Fpga_code/tb_click_detector.v Hardware/Fpga_code/click_detector.v
 ```
 
+The UART transmitter exposes `CLK_FREQ_HZ` and `BAUD_RATE` parameters. The default Tang Nano 9K timing is `27_000_000 / 9_600`, and `tb_uart_tx.v` checks the calculated divider.
+
 Backend syntax check:
 
 ```bash
@@ -327,7 +331,7 @@ https://maps.google.com/?q=LAT,LON
 # Known Limitations
 
 * Battery monitoring requires ADC calibration for the final voltage-divider values
-* GPS fallback uses static coordinates without satellite lock
+* GPS uses a static boot fallback only until the first valid NEO-6M fix; after that it reuses the last known fix during temporary lock loss
 * Face recognition requires a local `ai-face/faces/owner.jpg` image and depends on lighting conditions
 * Prototype uses static API-key authentication; production should rotate keys and use HTTPS/WSS
 

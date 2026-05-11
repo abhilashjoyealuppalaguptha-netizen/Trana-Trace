@@ -1,6 +1,9 @@
 `timescale 1ns / 1ps
 
 module tb_uart;
+    localparam integer CLK_FREQ_HZ = 27_000_000;
+    localparam integer BAUD_RATE   = 9_600;
+    localparam integer BAUD_DIV    = CLK_FREQ_HZ / BAUD_RATE;
 
     reg clk;
     reg rst;
@@ -10,7 +13,10 @@ module tb_uart;
     wire tx_pin;
     wire tx_busy;
 
-    uart_tx uut (
+    uart_tx #(
+        .CLK_FREQ_HZ(CLK_FREQ_HZ),
+        .BAUD_RATE(BAUD_RATE)
+    ) uut (
         .clk(clk),
         .rst(rst),
         .tx_start(tx_start),
@@ -42,7 +48,12 @@ module tb_uart;
         #10;
         tx_start = 0;
 
-        #500000;
+        if (uut.BAUD_DIV !== BAUD_DIV) begin
+            $display("FAIL: BAUD_DIV got %0d expected %0d", uut.BAUD_DIV, BAUD_DIV);
+            $fatal;
+        end
+
+        #(BAUD_DIV * 10 * 20);
 
         $finish;
     end
