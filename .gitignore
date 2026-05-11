@@ -10,3 +10,10 @@ scratch/
 impl/
 *.fs
 *.bitstream
+ai-face/.venv/
+ai-face/config.json
+ai-face/.env
+ai-face/faces/owner.jpg
+ai-face/captured/*.jpg
+ai-face/captured/*.jpeg
+ai-face/captured/*.png

@@ -236,16 +236,20 @@ npm run dev
 
 Install Python dependencies:
 
-```bash
-pip install opencv-python face_recognition numpy
-```
-
-Run the recognition engine:
-
-```bash
+```powershell
 cd ai-face
-python recognize.py
+.\setup.ps1
 ```
+
+Add the authorized owner's image at `ai-face/faces/owner.jpg`, set the backend API key in `ai-face/config.json`, then run:
+
+```powershell
+.\run.ps1 --self-test
+.\run.ps1
+```
+
+Use `source: "0"` for a laptop webcam, an ESP32-CAM stream URL such as `http://192.168.4.1:81/stream`, or a snapshot URL such as `http://192.168.4.1/capture`.
+`ai-face/faces/owner.jpg` is intentionally ignored by git because it contains private biometric data.
 
 ---
 
@@ -322,9 +326,9 @@ https://maps.google.com/?q=LAT,LON
 
 # Known Limitations
 
-* Battery monitoring is currently simulated
+* Battery monitoring requires ADC calibration for the final voltage-divider values
 * GPS fallback uses static coordinates without satellite lock
-* Face recognition accuracy depends on lighting conditions
+* Face recognition requires a local `ai-face/faces/owner.jpg` image and depends on lighting conditions
 * Prototype uses static API-key authentication; production should rotate keys and use HTTPS/WSS
 
 ---
