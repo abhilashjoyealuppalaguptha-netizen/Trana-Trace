@@ -108,7 +108,7 @@ export function useRealtime() {
         const message = JSON.parse(event.data);
         console.log(`[Realtime] Received ${message.type}`);
         
-        if (['INITIAL_STATE', 'STATUS_CHANGE', 'LOCATION_UPDATE', 'AI_ALERT'].includes(message.type)) {
+        if (['INITIAL_STATE', 'STATUS_CHANGE', 'LOCATION_UPDATE'].includes(message.type)) {
            setDeviceState(message.payload);
         } else if (message.type === 'NEW_LOG') {
            setLogs(prev => [message.payload, ...prev].slice(0, 50));

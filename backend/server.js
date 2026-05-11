@@ -233,45 +233,6 @@ app.post('/api/sos', requireAnyAuth, async (req, res) => {
   }
 });
 
-app.post('/api/ai/alert', requireApiKey, async (req, res) => {
-  const timestamp = new Date().toISOString();
-  const { event = "unknown_face", confidence = null, image_url = null, location = DEFAULT_LOCATION } = req.body;
-
-  try {
-    const deviceUpdate = {
-      status: "DANGER",
-      fpga_alert: "1",
-      ai_event: String(event),
-      ai_confidence: confidence === null ? "" : String(confidence),
-      intruder_image_url: image_url || "",
-      location: JSON.stringify(location),
-      last_updated: timestamp
-    };
-
-    await redisClient.hSet(`device:${DEVICE_ID}`, deviceUpdate);
-
-    const logEntry = `[${new Date().toLocaleTimeString()}] AI ALERT: ${event}`;
-    await redisClient.lPush(`logs:${DEVICE_ID}`, logEntry);
-
-    broadcastUpdate({
-      type: 'AI_ALERT',
-      payload: {
-        ...deviceUpdate,
-        id: DEVICE_ID,
-        location,
-        fpga_alert: 1,
-        confidence,
-        image_url
-      }
-    });
-    broadcastUpdate({ type: 'NEW_LOG', payload: logEntry });
-
-    res.status(200).json({ success: true, status: "DANGER" });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
 app.post('/api/reset-system', requireAnyAuth, async (req, res) => {
   try {
     const resetData = {
@@ -357,5 +318,5 @@ initRedis();
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`TRANA-TRACE backend listening at http://0.0.0.0:${PORT}`);
-  console.log(`Protected endpoints: /update, /api/device/update, /api/sos, /api/ai/alert`);
+  console.log(`Protected endpoints: /update, /api/device/update, /api/sos`);
 });

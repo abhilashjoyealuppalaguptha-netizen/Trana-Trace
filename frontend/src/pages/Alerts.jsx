@@ -111,7 +111,7 @@ function buildAlertsFromState(deviceState, logs) {
         type: log.includes('THREAT') ? 'threat' : 'connectivity',
         severity: log.includes('THREAT') ? 'high' : 'info',
         title: log,
-        description: 'Event captured from live hardware activity stream.',
+        description: 'Event recorded from live hardware activity stream.',
         coords,
         location: locStr,
         timestamp: new Date().toISOString(),
