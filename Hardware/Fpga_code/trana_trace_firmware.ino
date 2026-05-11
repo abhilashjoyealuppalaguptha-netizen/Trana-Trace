@@ -6,18 +6,17 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClientSecure.h>
 #include <UniversalTelegramBot.h>
-#include <ESP8266HTTPClient.h>
+#include <config.h>
+
+const char* ssid     = "YOUR_WIFI_SSID";
+const char* password = "YOUR_WIFI_PASSWORD";
 
 
-const char* ssid     = "Moto";
-const char* password = "vardhanguru";
+const char* serverURL = "http://YOUR_SERVER_IP:3001/update"; // CHANGE THIS
 
 
-const char* serverURL = "http://10.123.144.228:3001/update"; // CHANGE THIS
-
-
-#define BOT_TOKEN  "8696098274:AAFs_fApNQ27_MfS0b1DkogkqpsShWA4FKY"
-#define CHAT_ID    "7454524513"
+#define BOT_TOKEN  "YOUR_TELEGRAM_BOT_TOKEN"
+#define CHAT_ID    "YOUR_TELEGRAM_CHAT_ID"
 
 
 #define SCREEN_WIDTH 128
