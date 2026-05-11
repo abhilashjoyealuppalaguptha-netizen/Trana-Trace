@@ -218,6 +218,8 @@ node server.js
 Set `DEVICE_API_KEY` in `backend/.env`. All POST endpoints require the same value in the `X-API-Key` header.
 Set `AUTH_USERNAMES`, `AUTH_PASSWORD`, and `AUTH_TOKEN_SECRET` in the same file for dashboard login. The React app no longer contains a hardcoded username or password.
 
+For the frontend manual SOS button, copy `frontend/.env.example` to `frontend/.env` and set `VITE_API_KEY` to the same API key used by the backend. The SOS request sends both the dashboard bearer token and `X-Api-Key` header.
+
 ---
 
 ## 2. Frontend
@@ -312,6 +314,7 @@ https://maps.google.com/?q=LAT,LON
 * Never commit credentials to GitHub
 * Add `config.h` to `.gitignore`
 * Keep dashboard credentials in `backend/.env`, not in frontend source
+* Keep frontend API keys in `frontend/.env`, not in committed source
 * Use HTTPS and `wss://` for deployment
 * Rotate API keys and dashboard passwords before public demos
 

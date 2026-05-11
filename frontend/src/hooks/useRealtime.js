@@ -6,6 +6,7 @@ export function useRealtime() {
   const [wsConnected, setWsConnected] = useState(false);
   const ws = useRef(null);
   const prevStatus = useRef(null);
+  const apiKey = import.meta.env.VITE_API_KEY || '';
 
   // Audio Context for Tactical Alarm
   const playAlarm = useCallback(() => {
@@ -141,7 +142,10 @@ export function useRealtime() {
       if (hostname === 'localhost') hostname = '127.0.0.1';
       await fetch(`http://${hostname}:3001/api/sos`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}` }
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
+          'X-Api-Key': apiKey
+        }
       });
     } catch (err) {
       console.error("SOS trigger failed", err);

@@ -210,7 +210,7 @@ async function handleHardwareUpdate(req, res) {
 
 app.post('/api/device/update', requireApiKey, handleHardwareUpdate);
 
-app.post('/api/sos', requireDashboardAuth, async (req, res) => {
+app.post('/api/sos', requireAnyAuth, async (req, res) => {
   try {
     await redisClient.hSet(`device:${DEVICE_ID}`, { status: "DANGER", fpga_alert: "1" });
     const logEntry = `[${new Date().toLocaleTimeString()}] MANUAL SOS TRIGGERED`;
