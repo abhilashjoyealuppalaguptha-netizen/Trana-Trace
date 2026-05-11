@@ -20,6 +20,15 @@ redisClient.on('error', (err) => console.error('❌ Redis Error:', err));
 
 // Global settings
 const DEVICE_ID = "TT-01";
+const API_KEY = process.env.DEVICE_API_KEY || "trana-secret-tt01";
+function requireApiKey(req, res, next) {
+  const key = req.headers['x-api-key'];
+  if (!key || key !== API_KEY) {
+    console.log(`[AUTH] Rejected request — invalid API key`);
+    return res.status(401).json({ error: "Unauthorized — invalid or missing X-Api-Key header" });
+  }
+  next();
+}
 let clients = new Set();
 
 // Helper to determine status based on hardware logic
@@ -114,10 +123,10 @@ async function handleHardwareUpdate(req, res) {
   }
 }
 
-app.post('/update', handleHardwareUpdate);
-app.post('/api/device/update', handleHardwareUpdate);
+app.post('/update', requireApiKey, handleHardwareUpdate);
+app.post('/api/device/update', requireApiKey, handleHardwareUpdate);
 
-app.post('/api/sos', async (req, res) => {
+app.post('/api/sos',requireApiKey, async (req, res) => {
   console.log(`[${new Date().toLocaleTimeString()}] 🆘 MANUAL SOS TRIGGERED`);
   try {
     await redisClient.hSet(`device:${DEVICE_ID}`, { status: "DANGER", fpga_alert: "1" });
