@@ -75,12 +75,12 @@ app.get('/device', async (req, res) => {
 // Unified Update Logic (Used by both endpoints)
 async function handleHardwareUpdate(req, res) {
   try {
-    const { wifi, fpga_alert, telegram_sent, location } = req.body;
+    const { wifi, fpga_alert, telegram_sent, location, battery, gps_source } = req.body;
     const timestamp = new Date().toISOString();
     
     console.log(`\n[${new Date().toLocaleTimeString()}] 📥 HARDWARE UPDATE RECEIVED`);
     console.log(` -> Path: ${req.path}`);
-    console.log(` -> Data: WiFi=${wifi}, FPGA=${fpga_alert}, Tel=${telegram_sent}`);
+    console.log(` -> Data: WiFi=${wifi}, FPGA=${fpga_alert}, Tel=${telegram_sent}, Bat=${battery}, GPS=${gps_source}`);
     console.log(` -> Loc: ${JSON.stringify(location)}`);
 
     const status = calculateStatus({ wifi, fpga_alert });
@@ -89,9 +89,10 @@ async function handleHardwareUpdate(req, res) {
       wifi: String(wifi),
       fpga_alert: String(fpga_alert),
       telegram_sent: String(telegram_sent),
-      location: JSON.stringify(location || { lat: 17.087741, lng: 82.068706 }),
+      location: JSON.stringify(location),
       status: status,
-      battery: "100",
+      battery: String(battery != null ? battery : 100),
+      gps_source: String(gps_source || 'UNKNOWN'),
       last_updated: timestamp
     };
 
@@ -100,8 +101,8 @@ async function handleHardwareUpdate(req, res) {
     const broadcastData = {
       ...deviceUpdate,
       id: DEVICE_ID,
-      location: location || { lat: 17.087741, lng: 82.068706 },
-      battery: 100,
+      location: location,
+      battery: parseInt(battery != null ? battery : 100, 10),
       wifi: wifi === true || wifi === 'true',
       fpga_alert: parseInt(fpga_alert, 10),
       telegram_sent: telegram_sent === true || telegram_sent === 'true'
@@ -123,7 +124,9 @@ async function handleHardwareUpdate(req, res) {
   }
 }
 
-app.post('/update', requireApiKey, handleHardwareUpdate);
+// Hardware endpoint — no API key required (firmware cannot send custom headers easily)
+app.post('/update', handleHardwareUpdate);
+// Software/internal endpoint — API key required for security
 app.post('/api/device/update', requireApiKey, handleHardwareUpdate);
 
 app.post('/api/sos',requireApiKey, async (req, res) => {
@@ -142,7 +145,7 @@ app.post('/api/sos',requireApiKey, async (req, res) => {
   }
 });
 
-app.post('/api/reset-system', async (req, res) => {
+app.post('/api/reset-system', requireApiKey, async (req, res) => {
     console.log(`[${new Date().toLocaleTimeString()}] 🧹 SYSTEM RESET REQUESTED`);
     try {
         const resetData = {
