@@ -4,6 +4,7 @@ dist/
 *log
 .DS_Store
 config_local.h
+Hardware/Fpga_code/config.h
 scratch/
 *.vcd
 impl/

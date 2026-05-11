@@ -107,7 +107,7 @@ export function useRealtime() {
         const message = JSON.parse(event.data);
         console.log(`[Realtime] Received ${message.type}`);
         
-        if (['INITIAL_STATE', 'STATUS_CHANGE', 'LOCATION_UPDATE'].includes(message.type)) {
+        if (['INITIAL_STATE', 'STATUS_CHANGE', 'LOCATION_UPDATE', 'AI_ALERT'].includes(message.type)) {
            setDeviceState(message.payload);
         } else if (message.type === 'NEW_LOG') {
            setLogs(prev => [message.payload, ...prev].slice(0, 50));
@@ -139,7 +139,10 @@ export function useRealtime() {
     try {
       let hostname = window.location.hostname;
       if (hostname === 'localhost') hostname = '127.0.0.1';
-      await fetch(`http://${hostname}:3001/api/sos`, { method: 'POST' });
+      await fetch(`http://${hostname}:3001/api/sos`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}` }
+      });
     } catch (err) {
       console.error("SOS trigger failed", err);
     }

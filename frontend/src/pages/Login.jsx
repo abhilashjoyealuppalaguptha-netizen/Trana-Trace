@@ -47,20 +47,34 @@ export default function Login({ setIsLoggedIn }) {
     };
   }, []);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const validUsernames = [
-      'abhilash.joyeal_uppalaguptha',
-      'abhilashjoyealuppalagutpha@gmail.com',
-      'abhilashjoyealuppalaguptha@gmail.com' // Added spelling from screenshot
-    ];
-    if (!validUsernames.includes(username) || password !== 'Abhi@2007') {
-      setError('Invalid credentials');
-      return;
+    setError('');
+
+    try {
+      let hostname = window.location.hostname;
+      if (hostname === 'localhost') hostname = '127.0.0.1';
+
+      const response = await fetch(`http://${hostname}:3001/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      if (!response.ok) {
+        setError('Invalid credentials');
+        return;
+      }
+
+      const data = await response.json();
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('auth', 'true');
+      setIsLoggedIn(true);
+      navigate('/');
+    } catch (err) {
+      console.error('Login failed', err);
+      setError('Login service unavailable');
     }
-    localStorage.setItem('auth', 'true');
-    setIsLoggedIn(true);
-    navigate('/');
   };
 
   return (

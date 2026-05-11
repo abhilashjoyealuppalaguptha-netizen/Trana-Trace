@@ -137,16 +137,16 @@ If an unknown face is detected:
 
 ---
 
-# Firmware (`gpsbot.ino`)
+# Firmware (`trana_trace_firmware.ino`)
 
 The NodeMCU firmware continuously:
 
 * Reads GPS data from NEO-6M
 * Reads FPGA state bytes via UART
 * Sends Telegram alerts
-* Uploads device state to backend
+* Uploads authenticated device state to backend
 * Updates OLED display
-* Receives AI-triggered alerts
+* Sends calibrated battery percentage instead of a fixed demo value
 
 ## Required Libraries
 
@@ -167,15 +167,15 @@ SoftwareSerial
 | Runtime  | Node.js + Express                |
 | Database | Redis                            |
 | Realtime | WebSocket (`ws`)                 |
-| REST API | `/update`, `/device`, `/api/sos` |
+| REST API | `/device`, `/api/device/update`, `/api/sos`, `/api/ai/alert` |
 | Alerts   | Telegram integration             |
 
 ## Backend Responsibilities
 
 * Store live device data
 * Broadcast WebSocket updates
-* Handle SOS requests
-* Process AI face recognition alerts
+* Handle authenticated SOS requests
+* Process authenticated AI face recognition alerts
 * Manage device logs
 
 ---
@@ -211,8 +211,12 @@ Requires Redis running locally.
 ```bash
 cd backend
 npm install
+cp .env.example .env
 node server.js
 ```
+
+Set `DEVICE_API_KEY` in `backend/.env`. All POST endpoints require the same value in the `X-API-Key` header.
+Set `AUTH_USERNAMES`, `AUTH_PASSWORD`, and `AUTH_TOKEN_SECRET` in the same file for dashboard login. The React app no longer contains a hardcoded username or password.
 
 ---
 
@@ -245,21 +249,47 @@ python recognize.py
 
 ## 4. Firmware Setup
 
-Create a `config.h` file:
+Copy the example configuration and fill in local secrets:
 
-```cpp
-#define WIFI_SSID     "your_ssid"
-#define WIFI_PASSWORD "your_password"
-#define BOT_TOKEN     "your_telegram_bot_token"
-#define CHAT_ID       "your_chat_id"
+```bash
+cd Hardware/Fpga_code
+cp config.example.h config.h
 ```
 
 Then:
 
-1. Update backend IP inside `gpsbot.ino`
+1. Set WiFi, Telegram, backend URL, and `API_KEY` inside `config.h`
 2. Flash firmware to NodeMCU ESP8266
 3. Upload face recognition code to ESP32-CAM
 4. Synthesize and upload Verilog files to FPGA
+
+`Hardware/Fpga_code/config.h` is ignored by git so credentials are not committed.
+
+---
+
+# Verification
+
+Verilog simulation coverage now includes the UART transmitter, the main `trana_fsm`, and the `click_detector` debounce/window behavior:
+
+```bash
+iverilog -o tb_uart_tx Hardware/Fpga_code/tb_uart_tx.v Hardware/Fpga_code/uart_tx.v
+iverilog -o tb_trana_fsm Hardware/Fpga_code/tb_trana_fsm.v Hardware/Fpga_code/trana_fsm.v
+iverilog -o tb_click_detector Hardware/Fpga_code/tb_click_detector.v Hardware/Fpga_code/click_detector.v
+```
+
+Backend syntax check:
+
+```bash
+cd backend
+npm test
+```
+
+---
+
+# Hardware Design Docs
+
+* [Backup power module](docs/backup_power_design.md)
+* [AI and eSIM extension points](docs/extension_points.md)
 
 ---
 
@@ -281,8 +311,9 @@ https://maps.google.com/?q=LAT,LON
 
 * Never commit credentials to GitHub
 * Add `config.h` to `.gitignore`
+* Keep dashboard credentials in `backend/.env`, not in frontend source
 * Use HTTPS and `wss://` for deployment
-* Add authentication before production deployment
+* Rotate API keys and dashboard passwords before public demos
 
 ---
 
@@ -291,7 +322,7 @@ https://maps.google.com/?q=LAT,LON
 * Battery monitoring is currently simulated
 * GPS fallback uses static coordinates without satellite lock
 * Face recognition accuracy depends on lighting conditions
-* Backend APIs currently lack authentication
+* Prototype uses static API-key authentication; production should rotate keys and use HTTPS/WSS
 
 ---
 

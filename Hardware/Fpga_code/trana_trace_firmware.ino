@@ -6,17 +6,8 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClientSecure.h>
 #include <UniversalTelegramBot.h>
-#include <config.h>
-
-const char* ssid     = "YOUR_WIFI_SSID";
-const char* password = "YOUR_WIFI_PASSWORD";
-
-
-const char* serverURL = "http://YOUR_SERVER_IP:3001/update"; // CHANGE THIS
-
-
-#define BOT_TOKEN  "YOUR_TELEGRAM_BOT_TOKEN"
-#define CHAT_ID    "YOUR_TELEGRAM_CHAT_ID"
+#include <ESP8266HTTPClient.h>
+#include "config.h"
 
 
 #define SCREEN_WIDTH 128
@@ -55,7 +46,7 @@ UniversalTelegramBot bot(BOT_TOKEN, secureClient);
 void connectWiFi() {
     Serial.print("Connecting WiFi");
 
-    WiFi.begin(ssid, password);
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
     while (WiFi.status() != WL_CONNECTED) {
         delay(500);
@@ -89,13 +80,14 @@ bool sendTelegram(String msg) {
 String buildJSON() {
 
     bool wifiStatus = (WiFi.status() == WL_CONNECTED);
+    int batteryPercent = readBatteryPercent();
 
     String json = "{";
     json += "\"device_id\":\"TT-01\",";
     json += "\"wifi\":" + String(wifiStatus ? "true" : "false") + ",";
     json += "\"fpga_alert\":" + String(currentState) + ",";
     json += "\"telegram_sent\":" + String(alertSent ? "true" : "false") + ",";
-    json += "\"battery\":100,";
+    json += "\"battery\":" + String(batteryPercent) + ",";
     json += "\"location\":{";
     json += "\"lat\":" + latStr + ",";
     json += "\"lng\":" + lonStr;
@@ -106,6 +98,12 @@ String buildJSON() {
     return json;
 }
 
+int readBatteryPercent() {
+    int raw = analogRead(A0);
+    int percent = map(raw, BATTERY_ADC_EMPTY, BATTERY_ADC_FULL, 0, 100);
+    return constrain(percent, 0, 100);
+}
+
 
 void sendToServer(String json) {
 
@@ -114,8 +112,9 @@ void sendToServer(String json) {
     WiFiClient client;
     HTTPClient http;
 
-    http.begin(client, serverURL);  
+    http.begin(client, SERVER_URL);
     http.addHeader("Content-Type", "application/json");
+    http.addHeader("X-API-Key", API_KEY);
 
     int code = http.POST(json);
 

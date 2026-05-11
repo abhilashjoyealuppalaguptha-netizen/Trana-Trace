@@ -1,87 +1,59 @@
-\# Backup Power Module — Hardware Design
+# Backup Power Module Hardware Design
 
+## Purpose
 
+The backup power module keeps TRANA-TRACE alive after a thief attempts a normal shutdown or removes the visible supply path. In FAKE_OFF mode, only user-visible indicators are disabled; the FPGA, GPS, and wireless alert path remain powered.
 
-\## Purpose
+## Power Architecture
 
-Ensures TRANA TRACE keeps transmitting GPS alerts even when the thief attempts to power off the device or the battery runs critically low.
+```text
+3.7 V LiPo 2000 mAh
+  |
+  +-- TP4056 charger/protection board
+  |
+  +-- 3.3 V LDO rail -> Tang Nano 9K FPGA
+  |
+  +-- 3.3 V LDO rail -> ESP8266/NodeMCU + OLED
+  |
+  +-- Optional boost/GSM rail -> future A9G or LTE/eSIM module
+```
 
+## Stealth Switching
 
+The FPGA state machine controls the visible load rail.
 
-\## Power Architecture
+```text
+FPGA fake_pwr_en GPIO -> 1 kOhm base resistor -> 2N2222A transistor
+2N2222A switched rail -> OLED + visible LEDs
+Always-on rail -> FPGA + ESP8266 + GPS
+```
 
-\[3.7V LiPo 2000mAh]
+When the FSM enters FAKE_OFF, `fake_pwr_en` disables the OLED and LED rail. The device appears off, while the always-on rail continues GPS acquisition, UART state transfer, Telegram alerts, and backend uploads.
 
-│
+## Battery Monitoring
 
-├──► TP4056 (charging + protection)
+Battery voltage is measured by the ESP8266 ADC through a calibrated resistor divider. The firmware maps the ADC reading to a 0-100 percent battery value and sends it in every `/api/device/update` payload.
 
-│
+Recommended divider and thresholds:
 
-├──► XL6009 Boost → 4.2V → A9G GSM/GPS (always powered)
+| Item | Value |
+| --- | --- |
+| Divider | 100 kOhm / 100 kOhm |
+| Full ADC calibration | `BATTERY_ADC_FULL` in `config.h` |
+| Empty ADC calibration | `BATTERY_ADC_EMPTY` in `config.h` |
+| Low battery action | Backend dashboard warning; FPGA `batt_low` can trigger EMERGENCY |
 
-│
+## Bill of Materials
 
-├──► MCP1700 LDO #1 → 3.3V → Tang Nano 9K FPGA
+| Component | Example part | Purpose |
+| --- | --- | --- |
+| Battery | 3.7 V 2000 mAh LiPo | Backup energy source |
+| Charger/protection | TP4056 + DW01A | Charging and over-discharge protection |
+| LDO | MCP1700-3302E or AMS1117-3.3 | 3.3 V regulated rails |
+| Switch transistor | 2N2222A or AO3400 MOSFET | Visible rail cutoff |
+| Bulk capacitors | 100 uF, 10 V | Wireless transmit current buffering |
+| Decoupling capacitors | 100 nF ceramic | Local high-frequency filtering |
 
-│
+## Integration Notes
 
-└──► MCP1700 LDO #2 → 3.3V → ESP32-C3 + OLED
-
-\## Stealth Switch (FAKE\_OFF mechanism)
-
-
-
-When FSM enters FAKE\_OFF, FPGA pulls fake\_pwr\_en LOW.
-
-A 2N2222 transistor cuts power to OLED and LEDs only.
-
-A9G, ESP32, and FPGA continue running — device looks OFF from outside.
-
-
-
-Battery(+) ──► 2N2222 Collector ──► OLED + LED rail
-
-FPGA GPIO  ──► 2N2222 Base (1kΩ)
-
-GND        ──► 2N2222 Emitter
-## Battery Monitoring (ADC)
-
-Voltage divider on ESP32-C3 GPIO3:
-
-\- 100kΩ / 100kΩ divider scales 4.2V → 2.1V for ADC
-
-\- Low battery threshold: V\_adc < 1.6V (\~10% charge)
-
-\- ESP32 signals FPGA via UART → triggers EMERGENCY state
-
-
-
-\## Components
-
-
-
-| Component     | Model           | Purpose                        |
-
-|---------------|-----------------|--------------------------------|
-
-| Battery       | 3.7V 2000mAh    | Main power source              |
-
-| Charger       | TP4056 + DW01A  | Charging + over-discharge cut  |
-
-| Boost         | XL6009          | 3.7V → 4.2V for A9G           |
-
-| LDO (x2)      | MCP1700-3302E   | 3.3V regulated rails           |
-
-| Switch        | 2N2222A NPN     | Stealth power cut              |
-
-| Bulk Cap (x5) | 100µF 10V       | GSM TX spike absorption        |
-
-| Decoupling    | 100nF ceramic   | HF noise bypass                |
-
-
-
-\## Total BOM Cost: \~₹560
-
-EOF
-
+The current prototype documents the backup module as a discrete add-on so it can be reviewed independently of the FPGA and NodeMCU firmware. The final PCB should place the charger, always-on rail, switched-visible rail, ADC divider, and programming headers on a single board.
