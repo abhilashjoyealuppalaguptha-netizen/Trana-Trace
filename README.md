@@ -218,7 +218,7 @@ node server.js
 
 Set `DEVICE_API_KEY` in `backend/.env`. All POST endpoints require the same value in the `X-API-Key` header.
 Set `AUTH_USERNAMES`, `AUTH_PASSWORD`, and `AUTH_TOKEN_SECRET` in the same file for dashboard login. The React app no longer contains a hardcoded username or password.
-The legacy unauthenticated `/update` endpoint has been removed; firmware posts to `/api/device/update` with `X-API-Key`.
+The legacy `/update` endpoint is kept only as a protected compatibility alias; both `/update` and `/api/device/update` require `X-Api-Key`.
 
 For the frontend manual SOS button, copy `frontend/.env.example` to `frontend/.env` and set `VITE_API_KEY` to the same API key used by the backend. The SOS request sends both the dashboard bearer token and `X-Api-Key` header.
 

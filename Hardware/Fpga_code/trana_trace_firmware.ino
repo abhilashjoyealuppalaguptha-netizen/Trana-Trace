@@ -125,7 +125,7 @@ void sendToServer(String json) {
 
     http.begin(client, SERVER_URL);
     http.addHeader("Content-Type", "application/json");
-    http.addHeader("X-API-Key", API_KEY);
+    http.addHeader("X-Api-Key", API_KEY);
 
     int code = http.POST(json);
 

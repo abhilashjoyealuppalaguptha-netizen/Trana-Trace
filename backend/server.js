@@ -60,6 +60,13 @@ function requireApiKey(req, res, next) {
   next();
 }
 
+function safeStringEquals(left, right) {
+  const leftBuffer = Buffer.from(String(left));
+  const rightBuffer = Buffer.from(String(right));
+  if (leftBuffer.length !== rightBuffer.length) return false;
+  return crypto.timingSafeEqual(leftBuffer, rightBuffer);
+}
+
 function signToken(payload) {
   const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const signature = crypto.createHmac('sha256', AUTH_TOKEN_SECRET).update(body).digest('base64url');
@@ -133,7 +140,7 @@ app.post('/api/auth/login', (req, res) => {
     return res.status(503).json({ error: "Authentication is not configured" });
   }
 
-  if (!usernameAllowed || password !== AUTH_PASSWORD) {
+  if (!usernameAllowed || !safeStringEquals(password, AUTH_PASSWORD)) {
     return res.status(401).json({ error: "Invalid credentials" });
   }
 
@@ -209,6 +216,7 @@ async function handleHardwareUpdate(req, res) {
 }
 
 app.post('/api/device/update', requireApiKey, handleHardwareUpdate);
+app.post('/update', requireApiKey, handleHardwareUpdate);
 
 app.post('/api/sos', requireAnyAuth, async (req, res) => {
   try {
@@ -349,5 +357,5 @@ initRedis();
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`TRANA-TRACE backend listening at http://0.0.0.0:${PORT}`);
-  console.log(`Protected endpoints: /api/device/update, /api/sos, /api/ai/alert`);
+  console.log(`Protected endpoints: /update, /api/device/update, /api/sos, /api/ai/alert`);
 });
