@@ -186,3 +186,8 @@
   background: #FF0033;
   box-shadow: 0 0 8px rgba(255, 0, 51, 0.6);
 }
+
+@keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes reverse-spin { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+.animate-spin-slow { animation: spin-slow 20s linear infinite; }
+.animate-reverse-spin { animation: reverse-spin 15s linear infinite; }
