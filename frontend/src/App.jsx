@@ -14,11 +14,11 @@ function App() {
   const isDanger = deviceState?.status === 'DANGER';
   const isOffline = !wsConnected || deviceState?.status === 'OFFLINE';
   
-  const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('auth') === 'true');
+  const [isLoggedIn, setIsLoggedIn] = useState(() => sessionStorage.getItem('auth') === 'true');
 
   // Listen for logout events
   useEffect(() => {
-    const handler = () => setIsLoggedIn(localStorage.getItem('auth') === 'true');
+    const handler = () => setIsLoggedIn(sessionStorage.getItem('auth') === 'true');
     window.addEventListener('storage', handler);
     return () => window.removeEventListener('storage', handler);
   }, []);

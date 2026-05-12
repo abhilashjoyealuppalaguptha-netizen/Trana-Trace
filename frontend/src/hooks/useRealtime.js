@@ -143,7 +143,7 @@ export function useRealtime() {
       await fetch(`http://${hostname}:3001/api/sos`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
+          'Authorization': `Bearer ${sessionStorage.getItem('authToken') || ''}`,
           'X-Api-Key': apiKey
         }
       });

@@ -67,8 +67,8 @@ export default function Login({ setIsLoggedIn }) {
       }
 
       const data = await response.json();
-      localStorage.setItem('authToken', data.token);
-      localStorage.setItem('auth', 'true');
+      sessionStorage.setItem('authToken', data.token);
+      sessionStorage.setItem('auth', 'true');
       setIsLoggedIn(true);
       navigate('/');
     } catch (err) {
