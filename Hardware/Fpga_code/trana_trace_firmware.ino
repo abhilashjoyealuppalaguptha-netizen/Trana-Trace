@@ -99,9 +99,11 @@ String buildJSON() {
     json += "\"fpga_alert\":" + String(currentState) + ",";
     json += "\"telegram_sent\":" + String(alertSent ? "true" : "false") + ",";
     json += "\"battery\":" + String(batteryPercent) + ",";
+    String safeLat = hasGpsFix ? latStr : String(BOOT_FALLBACK_LAT);
+    String safeLon = hasGpsFix ? lonStr : String(BOOT_FALLBACK_LON);
     json += "\"location\":{";
-    json += "\"lat\":" + latStr + ",";
-    json += "\"lng\":" + lonStr;
+    json += "\"lat\":" + safeLat + ",";
+    json += "\"lng\":" + safeLon;
     json += "},";
     json += "\"gps_source\":\"" + gpsSource + "\"";
     json += "}";
