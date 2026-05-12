@@ -131,7 +131,11 @@ export default function Dashboard({ deviceState, logs, wsConnected, triggerSOS, 
 }
 
 // Add these to index.css if not present, but using style for now
-@keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-@keyframes reverse-spin { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
-.animate-spin-slow { animation: spin-slow 20s linear infinite; }
-.animate-reverse-spin { animation: reverse-spin 15s linear infinite; }
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  @keyframes reverse-spin { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
+  .animate-spin-slow { animation: spin-slow 20s linear infinite; }
+  .animate-reverse-spin { animation: reverse-spin 15s linear infinite; }
+`;
+document.head.appendChild(style);
