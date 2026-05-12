@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   AlertTriangle, Wifi, WifiOff, ShieldOff, ShieldAlert, ShieldCheck, 
   Clock, MapPin, ChevronRight, Search, BellRing, Zap,
-  EyeOff, Radio, Send, SendHorizonal
+  EyeOff, Radio, SendHorizontal
 } from 'lucide-react';
 
 // Derive real-time alerts from the current hardware device state
