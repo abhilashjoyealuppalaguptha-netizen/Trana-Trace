@@ -5,6 +5,7 @@ export function useRealtime() {
   const [logs, setLogs] = useState([]);
   const [wsConnected, setWsConnected] = useState(false);
   const ws = useRef(null);
+  const retryCount = useRef(0);
   const prevStatus = useRef(null);
   const apiKey = import.meta.env.VITE_API_KEY || '';
 
@@ -122,10 +123,14 @@ export function useRealtime() {
         console.error("[Realtime] WebSocket Error:", err);
       };
 
-      ws.current.onclose = (e) => {
-        console.warn(`[Realtime] WebSocket Closed: ${e.code} ${e.reason}`);
-        setWsConnected(false);
-        setTimeout(connectWS, 3000);
+    ws.current.onclose = (e) => {
+      console.warn(`[Realtime] WebSocket Closed: ${e.code} ${e.reason}`);
+      setWsConnected(false);
+      // Exponential backoff: 3s, 6s, 12s, 24s, max 30s
+      const delay = Math.min(3000 * Math.pow(2, retryCount.current), 30000);
+      console.log(`[Realtime] Reconnecting in ${delay/1000}s...`);
+      retryCount.current += 1;
+      setTimeout(connectWS, delay);
       };
     };
 
