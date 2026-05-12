@@ -7,17 +7,15 @@
 #include <WiFiClientSecure.h>
 #include <UniversalTelegramBot.h>
 #include <ESP8266HTTPClient.h>
+#include "config.h"
 
+#ifndef BOOT_FALLBACK_LAT
+#define BOOT_FALLBACK_LAT "17.087741"
+#endif
 
-const char* ssid     = "Moto";
-const char* password = "vardhanguru";
-
-
-const char* serverURL = "http://10.123.144.228:3001/update"; // CHANGE THIS
-
-
-#define BOT_TOKEN  "8696098274:AAFs_fApNQ27_MfS0b1DkogkqpsShWA4FKY"
-#define CHAT_ID    "7454524513"
+#ifndef BOOT_FALLBACK_LON
+#define BOOT_FALLBACK_LON "82.068706"
+#endif
 
 
 #define SCREEN_WIDTH 128
@@ -41,7 +39,10 @@ bool alertSent      = false;
 
 String latStr = "Searching...";
 String lonStr = "Searching...";
-String gpsSource = "DUM-E";
+String gpsSource = "BOOT-FALLBACK";
+String lastValidLatStr = BOOT_FALLBACK_LAT;
+String lastValidLonStr = BOOT_FALLBACK_LON;
+bool hasGpsFix = false;
 
 unsigned long lastDisplayUpdate = 0;
 unsigned long lastWifiCheck     = 0;
@@ -56,7 +57,7 @@ UniversalTelegramBot bot(BOT_TOKEN, secureClient);
 void connectWiFi() {
     Serial.print("Connecting WiFi");
 
-    WiFi.begin(ssid, password);
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
     while (WiFi.status() != WL_CONNECTED) {
         delay(500);
@@ -90,13 +91,14 @@ bool sendTelegram(String msg) {
 String buildJSON() {
 
     bool wifiStatus = (WiFi.status() == WL_CONNECTED);
+    int batteryPercent = readBatteryPercent();
 
     String json = "{";
     json += "\"device_id\":\"TT-01\",";
     json += "\"wifi\":" + String(wifiStatus ? "true" : "false") + ",";
     json += "\"fpga_alert\":" + String(currentState) + ",";
     json += "\"telegram_sent\":" + String(alertSent ? "true" : "false") + ",";
-    json += "\"battery\":100,";
+    json += "\"battery\":" + String(batteryPercent) + ",";
     json += "\"location\":{";
     json += "\"lat\":" + latStr + ",";
     json += "\"lng\":" + lonStr;
@@ -107,6 +109,12 @@ String buildJSON() {
     return json;
 }
 
+int readBatteryPercent() {
+    int raw = analogRead(A0);
+    int percent = map(raw, BATTERY_ADC_EMPTY, BATTERY_ADC_FULL, 0, 100);
+    return constrain(percent, 0, 100);
+}
+
 
 void sendToServer(String json) {
 
@@ -115,8 +123,9 @@ void sendToServer(String json) {
     WiFiClient client;
     HTTPClient http;
 
-    http.begin(client, serverURL);  
+    http.begin(client, SERVER_URL);
     http.addHeader("Content-Type", "application/json");
+    http.addHeader("X-Api-Key", API_KEY);
 
     int code = http.POST(json);
 
@@ -162,13 +171,21 @@ void loop() {
     if (gps.location.isValid() && gps.location.age() < 2000) {
         latStr = String(gps.location.lat(), 6);
         lonStr = String(gps.location.lng(), 6);
+        lastValidLatStr = latStr;
+        lastValidLonStr = lonStr;
+        hasGpsFix = true;
         gpsSource = "NEO-6M";
         Serial.println("📡 Location accessed NEO-6M");
+    } else if (hasGpsFix) {
+        latStr = lastValidLatStr;
+        lonStr = lastValidLonStr;
+        gpsSource = "LAST-KNOWN";
+        Serial.println("GPS lock unavailable; using last known fix");
     } else {
-        latStr = "17.087741";
-        lonStr = "82.068706";
-        gpsSource = "DUM-E";
-        Serial.println("⚠️ Location accessed DUM-E");
+        latStr = lastValidLatStr;
+        lonStr = lastValidLonStr;
+        gpsSource = "BOOT-FALLBACK";
+        Serial.println("GPS lock unavailable; using boot fallback until first fix");
     }
 
     // ── FPGA Read ───────────────────────────────

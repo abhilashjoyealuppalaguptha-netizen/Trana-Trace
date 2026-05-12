@@ -1,7 +1,8 @@
 const { createClient } = require('redis');
 
 const DEVICE_ID = "TT-01";
-const BACKEND_URL = 'http://localhost:3001/update';
+const BACKEND_URL = 'http://localhost:3001/api/device/update';
+const API_KEY = process.env.DEVICE_API_KEY || 'trana-trace-dev-key';
 
 async function testFlow() {
     const redisClient = createClient({ url: 'redis://localhost:6379' });
@@ -11,8 +12,8 @@ async function testFlow() {
         console.log('--- TEST 1: SEND THREAT (FPGA=1) ---');
         await fetch(BACKEND_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ wifi: true, fpga_alert: 1, location: { lat: 10, lng: 20 } })
+            headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+            body: JSON.stringify({ wifi: true, fpga_alert: 1, battery: 82, location: { lat: 10, lng: 20 } })
         });
         
         let data = await redisClient.hGetAll(`device:${DEVICE_ID}`);
@@ -22,8 +23,8 @@ async function testFlow() {
         console.log('\n--- TEST 2: SEND CLEAR (FPGA=0) ---');
         await fetch(BACKEND_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ wifi: true, fpga_alert: 0, location: { lat: 10, lng: 20 } })
+            headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+            body: JSON.stringify({ wifi: true, fpga_alert: 0, battery: 81, location: { lat: 10, lng: 20 } })
         });
         
         data = await redisClient.hGetAll(`device:${DEVICE_ID}`);
