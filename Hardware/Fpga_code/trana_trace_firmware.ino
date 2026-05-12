@@ -76,7 +76,7 @@ bool sendTelegram(String msg) {
         return false;
     }
     Serial.println("Sending Telegram...");
-    secureClient.setInsecure();
+    secureClient.setFingerprint("BB DC 45 2A 07 E3 4A 71 33 40 F7 9A 62 3D 5F EB C8 7E F2 08");
     bool ok = bot.sendMessage(CHAT_ID, msg, "");
     if (ok) {
         Serial.println("Telegram SENT ");
