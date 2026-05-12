@@ -205,6 +205,7 @@ async function handleHardwareUpdate(req, res) {
     if (parseInt(fpga_alert, 10) === 1) {
       const logEntry = `[${new Date().toLocaleTimeString()}] FPGA THREAT DETECTED`;
       await redisClient.lPush(`logs:${DEVICE_ID}`, logEntry);
+      await redisClient.lTrim(`logs:${DEVICE_ID}`, 0 ,999);
       broadcastUpdate({ type: 'NEW_LOG', payload: logEntry });
     }
 
@@ -223,7 +224,7 @@ app.post('/api/sos', requireAnyAuth, async (req, res) => {
     await redisClient.hSet(`device:${DEVICE_ID}`, { status: "DANGER", fpga_alert: "1" });
     const logEntry = `[${new Date().toLocaleTimeString()}] MANUAL SOS TRIGGERED`;
     await redisClient.lPush(`logs:${DEVICE_ID}`, logEntry);
-
+    await redisClient.lTrim(`logs:${DEVICE_ID}`,0,999);
     const deviceData = await redisClient.hGetAll(`device:${DEVICE_ID}`);
     broadcastUpdate({ type: 'STATUS_CHANGE', payload: { ...deviceData, id: DEVICE_ID } });
     broadcastUpdate({ type: 'NEW_LOG', payload: logEntry });
