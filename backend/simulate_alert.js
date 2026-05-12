@@ -1,11 +1,18 @@
+require('dotenv').config();
+
 async function simulateAlert() {
+    const serverUrl = process.env.SERVER_URL || 'http://localhost:3001/update';
+    const apiKey = process.env.DEVICE_API_KEY || '';
+
     console.log("🚀 Simulating FPGA Alert (fpga_alert: 1)...");
+    console.log(`   Target: ${serverUrl}`);
+
     try {
-        const response = await fetch('http://10.171.252.58:3001/update', {
+        const response = await fetch(serverUrl, {
             method: 'POST',
-            headers: { 
+            headers: {
                 'Content-Type': 'application/json',
-                'x-api-key': 'trana-secret-tt01' 
+                'x-api-key': apiKey
             },
             body: JSON.stringify({
                 wifi: true,
