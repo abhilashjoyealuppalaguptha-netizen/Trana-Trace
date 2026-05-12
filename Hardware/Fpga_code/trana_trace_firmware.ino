@@ -200,7 +200,7 @@ void loop() {
             Serial.print("RAW BYTE: ");
             Serial.println(received, BIN);
 
-            if (received == 2 && lastValidState != 1) {
+            if (received == 2 && lastValidState != 0 && lastValidState != 1) {
                 Serial.println("Ignoring false EMERGENCY");
                 continue;
             }
